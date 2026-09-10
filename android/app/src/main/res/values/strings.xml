@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">App Template</string>
+    <!-- Replace with the Meta app id / client token from developers.facebook.com -->
+    <string name="facebook_app_id">0</string>
+    <string name="fb_login_protocol_scheme">fb0</string>
+    <string name="facebook_client_token">PLACEHOLDER</string>
+    <!-- Overridden per flavor from TRUECALLER_CLIENT_ID in .env.dev / .env.prod. -->
+    <string name="truecaller_client_id"></string>
+</resources>

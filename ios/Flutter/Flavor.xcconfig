@@ -1,0 +1,3 @@
+APP_DISPLAY_NAME = App Template
+APP_URL_SCHEME = __APP_SCHEME__
+PRODUCT_BUNDLE_IDENTIFIER = com.example.appTemplate

@@ -1,0 +1,24 @@
+{
+  "parameters": {
+    "paywall_plan_variant": {
+      "defaultValue": { "value": "monthly" },
+      "description": "Capslock plan id shown when the paywall was not opened with a deeplink plan id."
+    },
+    "force_update": {
+      "defaultValue": { "value": "false" },
+      "description": "Boolean. When true, Android Play in-app update is required on resume and iOS UpgradeAlert hides Later."
+    },
+    "is_app_under_maintenance": {
+      "defaultValue": { "value": "false" },
+      "description": "Boolean. When true, a full-screen maintenance gate replaces the app navigator."
+    },
+    "maintenance_title": {
+      "defaultValue": { "value": "" },
+      "description": "Optional headline on the maintenance screen."
+    },
+    "maintenance_message": {
+      "defaultValue": { "value": "" },
+      "description": "Optional body copy on the maintenance screen."
+    }
+  }
+}

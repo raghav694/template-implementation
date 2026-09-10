@@ -1,0 +1,60 @@
+---
+description: Follow this template's architecture when adding features or changing core.
+alwaysApply: true
+---
+
+# Adding features in this Flutter template
+
+This is a reusable app template (package `app_template`). Do not modify Vokey (`StudioProjects/vokey`). Use **flutter_bloc + GetIt**. Do not add Riverpod, Provider, or GetX.
+
+## Layers
+
+```
+features → core → Flutter / SDKs
+```
+
+Features must not import other features. `core/` must not import `features/`.
+
+```
+lib/features/<name>/
+  domain/        entities, repository interfaces, use cases (Either<Failure, T>)
+  data/          models, datasources, repository impls
+  presentation/  cubit/bloc + screens (BlocBuilder / context.read)
+```
+
+Shared widgets go in `lib/shared/`. Identity is `AppIdentity` / `project_config.yaml`. Secrets stay in gitignored `.env.dev` / `.env.prod`.
+
+## Checklist for a new feature
+
+1. Create the slice under `lib/features/<name>/` as above. Copy paywall as the shape (`features/paywall/`).
+2. REST: add the path to `ApiRoutes`, a Retrofit `*ApiService`, and Freezed request/response DTOs. Register the service with `AppApiClient.dio`. Datasources use `_client.run(() => _api....)`. Do not hardcode hosts or call Dio directly.
+3. Register implementations in `configureDependencies()` (`lib/core/di/injection.dart`). Screens take BLoC from `context.read` / `BlocProvider`; services from `getIt<T>()`.
+4. Add `RoutePaths` + `GoRoute` in `lib/core/constants/route_paths.dart` and `lib/core/router/app_router.dart`. Use `RoutePaths.absolute` before `router.go` so paths like `paywall` do not nest.
+5. Product flags: add a key + default in `RemoteConfigKeys` / `RemoteConfigDefaults` and `remoteconfig.template.json`, or `GrowthBookKeys` for experiments. Document it in `STARTUP.md`.
+6. Tests next to existing ones under `test/`. Fake repositories/datasources; do not hit real Play/Firebase/network.
+7. Dont make changes to existing auth, paywall, events unless exlicitly mentioned.
+8. Make widgets child classes in seperate files dont make multiple classes in single class
+9. If the change is architectural (new core module, new RC key, new API, new gated SDK), update `ARCHITECTURE.md`, `STARTUP.md`, and `CODEWALKTHROUGH.md`.
+
+## Do
+
+```dart
+// ✅ domain use case returns Either
+Future<Either<Failure, Plan>> call() => repository.fetchPlan(id);
+
+// ✅ presentation
+context.read<PaywallPlanCubit>().load();
+getIt<AppUpdateService>().checkOnLaunch();
+```
+
+## Don't
+
+```dart
+// ❌ feature importing another feature
+import 'package:app_template/features/auth/presentation/screens/auth_screen.dart';
+
+// ❌ hardcoded product URL or Voice Club / Vokey-only API
+dio.get('https://api.voiceclub.app/...');
+```
+
+Use package imports (`package:app_template/...`). Match existing naming (`*Cubit`, `<Interface>Impl` for the production implementation). Do not invent prefixes like `Rest*` / `Firebase*` when there is a single impl — `AuthRemoteDataSource` → `AuthRemoteDataSourceImpl`. Vendor-named classes are only for multiple interchangeable impls (`FirebaseAnalyticsService`, `MixpanelAnalyticsService`). Fakes stay `Fake*`. Paywall checkout is Capslock Payments (`CheckoutClient` + host-owned `PaywallCheckout` / `UpiService`); do not add a second billing SDK, pick Cashfree/PhonePe on the client, or depend on SDK `PaymentWidget` (removed). Truecaller is optional: when `AppConfig.hasTruecaller` and the platform is Android, auto-launch the sheet on the auth screen (once per visit) and keep the CTA as a retry; silence SDK unavailability / cancel so OTP stays available.

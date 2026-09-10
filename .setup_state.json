@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "App Template",
+    "dart_package": "app_template",
+    "android_package": "com.example.app_template",
+    "ios_bundle_id": "com.example.appTemplate",
+    "support_email": "__SUPPORT_EMAIL__",
+    "terms_url": "__TERMS_URL__",
+    "privacy_url": "__PRIVACY_URL__"
+  },
+  "deeplink": {
+    "scheme": "__APP_SCHEME__",
+    "host": "__DEEPLINK_HOST__"
+  },
+  "firebase": {
+    "dev": { "project_id": "__DEV_FIREBASE_PROJECT_ID__" },
+    "prod": { "project_id": "__PROD_FIREBASE_PROJECT_ID__" }
+  }
+}
