@@ -21,6 +21,11 @@ pipeline {
         )
     }
 
+    environment {
+        FLUTTER_HOME = "${WORKSPACE}/.flutter"
+        PATH = "${WORKSPACE}/.flutter/bin:${HOME}/.pub-cache/bin:${PATH}"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -34,25 +39,65 @@ pipeline {
             }
         }
 
-        stage('Install FVM') {
+        stage('Install Flutter & Dart') {
             steps {
                 sh '''
-                    dart pub global activate fvm
+                    set -e
+
+                    echo "Installing Flutter..."
+
+                    if [ ! -d "$FLUTTER_HOME" ]; then
+                        git clone \
+                            --depth 1 \
+                            --branch stable \
+                            https://github.com/flutter/flutter.git \
+                            "$FLUTTER_HOME"
+                    fi
+
+                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
+
+                    echo "Flutter:"
+                    flutter --version
+
+                    echo "Dart:"
+                    dart --version
                 '''
             }
         }
 
-        stage('Install Flutter') {
+        stage('Install FVM') {
             steps {
                 sh '''
-                    export PATH="$HOME/.pub-cache/bin:$PATH"
+                    set -e
 
-                    echo "Installing Flutter version from .fvmrc"
+                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
+
+                    echo "Installing FVM..."
+
+                    dart pub global activate fvm
+
+                    echo "FVM:"
+                    fvm --version
+                '''
+            }
+        }
+
+        stage('Install Project Flutter Version') {
+            steps {
+                sh '''
+                    set -e
+
+                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
+
+                    echo "Installing Flutter version from .fvmrc..."
 
                     fvm install
 
-                    echo "Flutter version:"
+                    echo "Project Flutter version:"
                     fvm flutter --version
+
+                    echo "Project Dart version:"
+                    fvm dart --version
                 '''
             }
         }
@@ -60,7 +105,9 @@ pipeline {
         stage('Dependencies') {
             steps {
                 sh '''
-                    export PATH="$HOME/.pub-cache/bin:$PATH"
+                    set -e
+
+                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
 
                     fvm flutter pub get
                 '''
@@ -74,7 +121,9 @@ pipeline {
                     if (params.BUILD_TYPE == 'apk') {
 
                         sh """
-                            export PATH="\$HOME/.pub-cache/bin:\$PATH"
+                            set -e
+
+                            export PATH="\$FLUTTER_HOME/bin:\$HOME/.pub-cache/bin:\$PATH"
 
                             fvm flutter build apk --release \
                                 --dart-define=ENV=${params.ENVIRONMENT} \
@@ -84,7 +133,9 @@ pipeline {
                     } else {
 
                         sh """
-                            export PATH="\$HOME/.pub-cache/bin:\$PATH"
+                            set -e
+
+                            export PATH="\$FLUTTER_HOME/bin:\$HOME/.pub-cache/bin:\$PATH"
 
                             fvm flutter build appbundle --release \
                                 --dart-define=ENV=${params.ENVIRONMENT} \
@@ -103,11 +154,18 @@ pipeline {
                 fingerprint: true
             )
 
-            echo "Build successful!"
+            echo "====================================="
+            echo "BUILD SUCCESSFUL"
+            echo "Branch: ${params.BRANCH}"
+            echo "Environment: ${params.ENVIRONMENT}"
+            echo "Build Type: ${params.BUILD_TYPE}"
+            echo "====================================="
         }
 
         failure {
-            echo "Build failed!"
+            echo "====================================="
+            echo "BUILD FAILED"
+            echo "====================================="
         }
     }
 }
