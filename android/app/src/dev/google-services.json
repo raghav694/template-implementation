@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "__DEV_FIREBASE_PROJECT_ID__",
-    "storage_bucket": "__DEV_FIREBASE_PROJECT_ID__.appspot.com"
+    "project_number": "658290170276",
+    "project_id": "template-implementation-dev",
+    "storage_bucket": "template-implementation-dev.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:dev0000000000000",
+        "mobilesdk_app_id": "1:658290170276:android:bc0359a4da81f1afa64931",
         "android_client_info": {
-          "package_name": "com.example.app_template.dev"
+          "package_name": "com.template.implementation.dev"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_ME_DEV_ANDROID_API_KEY"
+          "current_key": "AIzaSyAZk-Kr5h_uUbkodymzFRLCjQoeokvz5IM"
         }
       ],
       "services": {

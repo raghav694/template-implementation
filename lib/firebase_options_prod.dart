@@ -26,19 +26,18 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_ME_PROD_ANDROID_API_KEY',
-    appId: '1:000000000000:android:0000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: '__PROD_FIREBASE_PROJECT_ID__',
-    storageBucket: '__PROD_FIREBASE_PROJECT_ID__.appspot.com',
+    apiKey: 'AIzaSyBovmZIqfvbnVA22K56CkDB7MQLlZRkXXQ',
+    appId: '1:811313431202:android:7cb101a0b22c961464cdfb',
+    messagingSenderId: '811313431202',
+    projectId: 'template-implementation-prod',
+    storageBucket: 'template-implementation-prod.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'REPLACE_ME_PROD_IOS_API_KEY',
     appId: '1:000000000000:ios:0000000000000000',
     messagingSenderId: '000000000000',
-    projectId: '__PROD_FIREBASE_PROJECT_ID__',
-    storageBucket: '__PROD_FIREBASE_PROJECT_ID__.appspot.com',
+    projectId: 'template-implementation-prod',
+    storageBucket: 'template-implementation-prod.appspot.com',
     iosBundleId: '__IOS_BUNDLE_ID__',
   );
 }

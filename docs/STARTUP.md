@@ -8,7 +8,7 @@ chmod +x scripts/*.sh
 
 ## 1. Clone and identity
 
-- [ ] Create a repository from the GitHub template
+- [x] Create a repository from the GitHub template
 - [ ] Clone it
 - [ ] Run setup (edits `project_config.yaml` interactively, or edit the file first)
 
@@ -18,12 +18,14 @@ chmod +x scripts/*.sh
 
 The script asks for app name, Android package, **required** Firebase project IDs (create new or reuse existing), API URLs, optional deep-link scheme/host, support email, and **Terms / Privacy / Refund** URLs (Profile webviews; auth still shows terms + privacy).
 
-| Prompt | Required? |
-| --- | --- |
-| iOS bundle identifier | No — Enter skips iOS. Native files stay `com.example.appTemplate` |
-| Deep-link scheme / host | No — Enter keeps `__APP_SCHEME__` / `__DEEPLINK_HOST__`. App Links stay off |
-| Create new Firebase projects? | Yes — `Y` creates missing IDs later; `n` requires existing Dev + Prod IDs |
-| Firebase Dev / Prod project IDs | Yes — never skipped |
+
+| Prompt                          | Required?                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| iOS bundle identifier           | No — Enter skips iOS. Native files stay `com.example.appTemplate`           |
+| Deep-link scheme / host         | No — Enter keeps `__APP_SCHEME__` / `__DEEPLINK_HOST__`. App Links stay off |
+| Create new Firebase projects?   | Yes — `Y` creates missing IDs later; `n` requires existing Dev + Prod IDs   |
+| Firebase Dev / Prod project IDs | Yes — never skipped                                                         |
+
 
 Setup writes those IDs into `project_config.yaml`. `./scripts/setup_firebase.sh` uses them (it does not invent new IDs). If you chose to create, missing projects are created; if you said no, only existing projects are used.
 
@@ -37,14 +39,16 @@ Setup writes identity into Android, Dart, and env files. Secrets (Mixpanel, Slac
 
 Every field in `./scripts/setup_theme.sh` is skippable (Enter, or omit the flag).
 
-| Prompt | What it changes |
-| --- | --- |
-| App logo path | In-app `AppLogo`, `assets/logo/logo.png`, launcher icons, Android/iOS splash |
-| Adaptive icon foreground | Android adaptive icon (`assets/logo/foreground.png`); defaults to the logo |
-| Primary color | Accent, gradient, glow, Android adaptive-icon background |
-| Background color | App canvas + splash background |
-| Error color | Destructive / error token |
-| Text theme font | Google Fonts family for `AppTypography` (default Poppins) |
+
+| Prompt                   | What it changes                                                              |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| App logo path            | In-app `AppLogo`, `assets/logo/logo.png`, launcher icons, Android/iOS splash |
+| Adaptive icon foreground | Android adaptive icon (`assets/logo/foreground.png`); defaults to the logo   |
+| Primary color            | Accent, gradient, glow, Android adaptive-icon background                     |
+| Background color         | App canvas + splash background                                               |
+| Error color              | Destructive / error token                                                    |
+| Text theme font          | Google Fonts family for `AppTypography` (default Poppins)                    |
+
 
 ```bash
 ./scripts/setup_theme.sh
@@ -79,10 +83,12 @@ firebase login --reauth         # browser; use --reauth so a stale token is refr
 
 If YAML has no IDs (you skipped `setup_project.sh`), it asks for them: existing IDs if you are not creating, or new IDs if you are.
 
-| Flavor | Android applicationId | iOS bundle ID |
-| --- | --- | --- |
-| Dev | `{android_package}.dev` | `{ios_bundle_id}.dev` |
-| Prod | `{android_package}` | `{ios_bundle_id}` |
+
+| Flavor | Android applicationId   | iOS bundle ID         |
+| ------ | ----------------------- | --------------------- |
+| Dev    | `{android_package}.dev` | `{ios_bundle_id}.dev` |
+| Prod   | `{android_package}`     | `{ios_bundle_id}`     |
+
 
 `--existing` only registers apps (same as answering no during setup). `--dev` / `--prod` run one flavor. If a chosen ID is taken globally, the script tries `projects:addfirebase` first. It asks for a different ID only if attach fails and the ID is still not in this account’s Firebase list.
 
@@ -94,32 +100,40 @@ Then in the **Firebase console** (repeat for Dev **and** Prod):
 - [ ] Enable Remote Config and publish the keys below
 - [ ] Add SHA-1 / SHA-256 from the upload keystore (Android)
 
+
+
 ### Remote Config keys
 
 Canonical list: `remoteconfig.template.json`. The app has in-app defaults, but unpublished console keys mean you cannot flip force-update or maintenance without a new build.
 
-| Key | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `paywall_plan_variant` | String | `monthly` | Plan id on the paywall when there is no deeplink plan id and GrowthBook has not assigned one. **Not** access / entitlement. |
-| `force_update` | Boolean | `false` | Mandatory store update. Android: Play in-app update on launch and resume. iOS: App Store dialog hides Later |
-| `is_app_under_maintenance` | Boolean | `false` | Full-screen maintenance gate over the whole app |
-| `maintenance_title` | String | *(empty)* | Headline on that maintenance screen |
-| `maintenance_message` | String | *(empty)* | Body copy on that maintenance screen |
+
+| Key                        | Type    | Default   | What it does                                                                                                                |
+| -------------------------- | ------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `paywall_plan_variant`     | String  | `monthly` | Plan id on the paywall when there is no deeplink plan id and GrowthBook has not assigned one. **Not** access / entitlement. |
+| `force_update`             | Boolean | `false`   | Mandatory store update. Android: Play in-app update on launch and resume. iOS: App Store dialog hides Later                 |
+| `is_app_under_maintenance` | Boolean | `false`   | Full-screen maintenance gate over the whole app                                                                             |
+| `maintenance_title`        | String  | *(empty)* | Headline on that maintenance screen                                                                                         |
+| `maintenance_message`      | String  | *(empty)* | Body copy on that maintenance screen                                                                                        |
+
 
 Firebase Boolean parameters must be type **Boolean**, not a string `"false"`.
 
 - [ ] Dev: create all five keys, leave defaults, **Publish**
 - [ ] Prod: same keys, **Publish**
 
+
+
 ### GrowthBook features
 
 Create these in the GrowthBook dashboard (same names as `GrowthBookKeys`). Empty
 `GROWTHBOOK_API_KEY` skips the SDK; the app uses the in-app defaults below.
 
-| Key | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `paywall_plan_variant` | String | *(off → Remote Config)* | Plan id when the feature is on. Loses to a deeplink plan id. |
-| `forceUpdate` | Boolean | `false` | Mandatory store update, ORed with RC / config API |
+
+| Key                    | Type    | Default                 | What it does                                                 |
+| ---------------------- | ------- | ----------------------- | ------------------------------------------------------------ |
+| `paywall_plan_variant` | String  | *(off → Remote Config)* | Plan id when the feature is on. Loses to a deeplink plan id. |
+| `forceUpdate`          | Boolean | `false`                 | Mandatory store update, ORed with RC / config API            |
+
 
 UTM from deeplinks / Play Install Referrer is also sent as GrowthBook
 attributes (`utmSource`, `utmMedium`, `ref`, `gclid`, `gbraid`) for targeting.
@@ -155,28 +169,32 @@ sheet is not auto-launched. When set on Android, the sheet auto-launches once
 per login visit; OTP always remains. iOS / web never show the CTA. Runtime
 flow: `ARCHITECTURE.md` (Auth) and `CODEWALKTHROUGH.md` §4.
 
-| Service | Required values | Where | How to disable |
-| --- | --- | --- | --- |
-| Mixpanel | project token | `.env.*` `MIXPANEL_TOKEN` | Leave empty |
-| Meta Pixel / App Events | Facebook App ID + Client Token | `android/.../strings.xml`, `ios/Runner/Info.plist` | Leave placeholders |
-| Firebase Analytics | Firebase project | native config + FlutterFire options | Remove `FirebaseAnalyticsService` from `analytics_factory.dart` |
-| Crashlytics | Firebase project | Gradle plugin + `CrashlyticsService` | Collection is off in debug |
-| Remote Config | parameters in console (section 3) | `remoteconfig.template.json` | In-app defaults if a key is missing |
-| GrowthBook | SDK client key | `.env.*` `GROWTHBOOK_API_KEY` (+ optional host URL) | Leave empty — in-app defaults |
-| App update / force update | RC `force_update` **or** GB `forceUpdate` + store listing | Firebase console + GrowthBook dashboard; optional `GET /api/v1/config/status` | Leave both force flags false |
-| FCM | Firebase project + iOS key | native config files | Listener no-ops if Firebase did not init |
-| Phone OTP | `AUTH_BASE_URL` + `AUTH_TENANT_ID` + `/public/tenants/{tenant}/otp/*` | `.env.*` | Auth screen is the default sign-in path |
-| Truecaller | `TRUECALLER_CLIENT_ID` + `POST /public/tenants/{tenant}/truecaller/verify` | `.env.*` and flavor `truecaller.xml` | Leave empty — CTA hidden, no auto-launch |
-| Plans / paywall | `PAYMENTS_BASE_URL` + `PAYMENTS_TENANT_ID` + Capslock `/v1/tenants/{tenant}/plans` | `.env.*` + optional deeplink `planId` + GB / RC `paywall_plan_variant` | Empty payments env: plan load errors, CTA hint |
-| Checkout / Autopay | same Capslock origin; host `PaywallCheckout` + `UpiService` | Android UPI; see `PAYMENTS.md` | Empty env or non-Android: CTA disabled |
-| Entitlement (access) | Auth profile `entitlement` / `has_purchased`, overlayed with Capslock `validity_end_at` | OTP / Truecaller / resume `EntitlementCubit.refreshFor` | Not Remote Config |
-| Cancel / renew / dates | Capslock `getUserSubscription` / `cancelSubscription` | Profile → Payment settings | Cancel Autopay; Renew when free + has purchased; none on one-time |
-| Expire / first paywall | same profile fields | `appRedirect` → `source=init` or `source=renewal` | Free-to-play: keep sending `entitlement: premium` |
-| Pending payment events | `/api/v1/events/pending`, `/api/v1/events/{id}/done` | `.env.*` | Drain no-ops if the API is unreachable |
-| Deep links | scheme + host | `project_config.yaml` | Enter skips; runtime no-ops until both are set |
-| Legal pages | terms / privacy / refund URLs | `project_config.yaml` → Profile | Placeholders still show the rows |
-| Short-link resolve | `POST /api/v1/deeplinks/resolve` | Backend | UTM is still saved from the raw URL |
-| Play Install Referrer | Play campaign UTM + `short_id` | Android, first launch | No-ops on iOS / if Play returns nothing |
+
+| Service                   | Required values                                                                         | Where                                                                         | How to disable                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Mixpanel                  | project token                                                                           | `.env.*` `MIXPANEL_TOKEN`                                                     | Leave empty                                                       |
+| Meta Pixel / App Events   | Facebook App ID + Client Token                                                          | `android/.../strings.xml`, `ios/Runner/Info.plist`                            | Leave placeholders                                                |
+| Firebase Analytics        | Firebase project                                                                        | native config + FlutterFire options                                           | Remove `FirebaseAnalyticsService` from `analytics_factory.dart`   |
+| Crashlytics               | Firebase project                                                                        | Gradle plugin + `CrashlyticsService`                                          | Collection is off in debug                                        |
+| Remote Config             | parameters in console (section 3)                                                       | `remoteconfig.template.json`                                                  | In-app defaults if a key is missing                               |
+| GrowthBook                | SDK client key                                                                          | `.env.*` `GROWTHBOOK_API_KEY` (+ optional host URL)                           | Leave empty — in-app defaults                                     |
+| App update / force update | RC `force_update` **or** GB `forceUpdate` + store listing                               | Firebase console + GrowthBook dashboard; optional `GET /api/v1/config/status` | Leave both force flags false                                      |
+| FCM                       | Firebase project + iOS key                                                              | native config files                                                           | Listener no-ops if Firebase did not init                          |
+| Phone OTP                 | `AUTH_BASE_URL` + `AUTH_TENANT_ID` + `/public/tenants/{tenant}/otp/*`                   | `.env.*`                                                                      | Auth screen is the default sign-in path                           |
+| Truecaller                | `TRUECALLER_CLIENT_ID` + `POST /public/tenants/{tenant}/truecaller/verify`              | `.env.*` and flavor `truecaller.xml`                                          | Leave empty — CTA hidden, no auto-launch                          |
+| Plans / paywall           | `PAYMENTS_BASE_URL` + `PAYMENTS_TENANT_ID` + Capslock `/v1/tenants/{tenant}/plans`      | `.env.*` + optional deeplink `planId` + GB / RC `paywall_plan_variant`        | Empty payments env: plan load errors, CTA hint                    |
+| Checkout / Autopay        | same Capslock origin; host `PaywallCheckout` + `UpiService`                             | Android UPI; see `PAYMENTS.md`                                                | Empty env or non-Android: CTA disabled                            |
+| Entitlement (access)      | Auth profile `entitlement` / `has_purchased`, overlayed with Capslock `validity_end_at` | OTP / Truecaller / resume `EntitlementCubit.refreshFor`                       | Not Remote Config                                                 |
+| Cancel / renew / dates    | Capslock `getUserSubscription` / `cancelSubscription`                                   | Profile → Payment settings                                                    | Cancel Autopay; Renew when free + has purchased; none on one-time |
+| Expire / first paywall    | same profile fields                                                                     | `appRedirect` → `source=init` or `source=renewal`                             | Free-to-play: keep sending `entitlement: premium`                 |
+| Pending payment events    | `/api/v1/events/pending`, `/api/v1/events/{id}/done`                                    | `.env.*`                                                                      | Drain no-ops if the API is unreachable                            |
+| Deep links                | scheme + host                                                                           | `project_config.yaml`                                                         | Enter skips; runtime no-ops until both are set                    |
+| Legal pages               | terms / privacy / refund URLs                                                           | `project_config.yaml` → Profile                                               | Placeholders still show the rows                                  |
+| Short-link resolve        | `POST /api/v1/deeplinks/resolve`                                                        | Backend                                                                       | UTM is still saved from the raw URL                               |
+| Play Install Referrer     | Play campaign UTM + `short_id`                                                          | Android, first launch                                                         | No-ops on iOS / if Play returns nothing                           |
+
+
+
 
 ## 5. Validate and first run
 
@@ -203,6 +221,8 @@ flutter run --flavor dev -t lib/main_dev.dart
 - [ ] Notifications (foreground + tap)
 - [ ] Remote Config keys exist in Dev and Prod
 - [ ] GrowthBook features exist if `GROWTHBOOK_API_KEY` is set
+
+
 
 ## 6. Ship
 
@@ -250,3 +270,4 @@ When you need custom scheme / App Links:
 
 1. Set `deeplink.scheme` and `deeplink.host` (or re-run `./scripts/setup_project.sh`)
 2. Confirm `AndroidManifest.xml` intent filters picked up the real values (setup does not write empty `android:scheme=""`)
+

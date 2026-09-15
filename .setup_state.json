@@ -1,19 +1,44 @@
 {
   "app": {
-    "name": "App Template",
+    "name": "Template Implementation",
     "dart_package": "app_template",
-    "android_package": "com.example.app_template",
-    "ios_bundle_id": "com.example.appTemplate",
-    "support_email": "__SUPPORT_EMAIL__",
-    "terms_url": "__TERMS_URL__",
-    "privacy_url": "__PRIVACY_URL__"
+    "android_package": "com.template.implementation",
+    "ios_bundle_id": "__IOS_BUNDLE_ID__",
+    "support_email": "\"test@gmail.com\u001b[C\u001b[D\"",
+    "terms_url": "fsfg",
+    "privacy_url": "fgr",
+    "refund_url": "rtrg"
   },
-  "deeplink": {
-    "scheme": "__APP_SCHEME__",
-    "host": "__DEEPLINK_HOST__"
+  "environment": {
+    "dev": {
+      "api_base_url": "https://scrapbook.dev.apps.capslockmarketplaces.com/public",
+      "display_name": "__APP_NAME__ Dev",
+      "android_application_id_suffix": ".dev",
+      "ios_bundle_id_suffix": ".dev"
+    },
+    "prod": {
+      "api_base_url": "https://scrapbook.dev.apps.capslockmarketplaces.com/public",
+      "display_name": "__APP_NAME__"
+    }
   },
   "firebase": {
-    "dev": { "project_id": "__DEV_FIREBASE_PROJECT_ID__" },
-    "prod": { "project_id": "__PROD_FIREBASE_PROJECT_ID__" }
+    "functions_region": "asia-south1",
+    "create_if_missing": "true",
+    "dev": {
+      "project_id": "template-implementation-dev"
+    },
+    "prod": {
+      "project_id": "template-implementation-prod"
+    }
+  },
+  "analytics": {
+    "mixpanel": {
+      "dev_token": "",
+      "prod_token": ""
+    }
+  },
+  "deeplink": {
+    "scheme": "template",
+    "host": "__DEEPLINK_HOST__"
   }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">App Template</string>
+    <string name="app_name">Template Implementation</string>
     <!-- Replace with the Meta app id / client token from developers.facebook.com -->
     <string name="facebook_app_id">0</string>
     <string name="fb_login_protocol_scheme">fb0</string>

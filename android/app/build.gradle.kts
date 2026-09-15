@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.app_template"
+        applicationId = "com.template.implementation"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
@@ -43,11 +43,11 @@ android {
         create("dev") {
             dimension = "environment"
             applicationIdSuffix = ".dev"
-            resValue("string", "app_name", "App Template Dev")
+            resValue("string", "app_name", "Template Implementation Dev")
         }
         create("prod") {
             dimension = "environment"
-            resValue("string", "app_name", "App Template")
+            resValue("string", "app_name", "Template Implementation")
         }
     }
 
