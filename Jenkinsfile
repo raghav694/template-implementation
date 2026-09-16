@@ -1,3 +1,21 @@
+def resolveFlutterBin() {
+    def home = tool 'Flutter-3.35.1'
+    echo "Flutter tool home: ${home}"
+
+    if (fileExists("${home}/bin/dart")) {
+        return "${home}/bin"
+    }
+    if (fileExists("${home}/flutter/bin/dart")) {
+        return "${home}/flutter/bin"
+    }
+
+    error(
+        "dart not found under ${home}. " +
+        "Set Generic Tool Home to the Flutter SDK root (the folder that contains bin/flutter). " +
+        "If you used Extract *.zip/*.tar.gz, Subdirectory of extracted archive must be flutter."
+    )
+}
+
 pipeline {
     agent any
 
@@ -21,11 +39,7 @@ pipeline {
         )
     }
 
-    // Bootstrap Flutter from Manage Jenkins → Tools → Generic Tool (name: Flutter-3.35.1).
-    // Project Flutter version comes from .fvmrc via FVM. Cache lives in the Jenkins
-    // user home so deleteDir() does not force a re-download every build.
     environment {
-        PATH = "${tool 'Flutter-3.35.1'}/bin:${env.HOME}/.pub-cache/bin:${env.PATH}"
         PUB_CACHE = "${env.HOME}/.pub-cache"
         FVM_HOME = "${env.HOME}/fvm"
     }
@@ -45,8 +59,17 @@ pipeline {
 
         stage('Setup FVM') {
             steps {
+                script {
+                    def flutterBin = resolveFlutterBin()
+                    env.PATH = "${flutterBin}:${env.HOME}/.pub-cache/bin:${env.PATH}"
+                    echo "Using dart at ${flutterBin}/dart"
+                }
+
                 sh '''
                     set -e
+
+                    command -v dart
+                    dart --version
 
                     dart pub global activate fvm
                     fvm install
