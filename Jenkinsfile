@@ -1,19 +1,58 @@
+def flutterBinIfPresent(String root) {
+    if (!root || root == '.') {
+        return null
+    }
+    if (fileExists("${root}/bin/dart")) {
+        return "${root}/bin"
+    }
+    if (fileExists("${root}/flutter/bin/dart")) {
+        return "${root}/flutter/bin"
+    }
+    return null
+}
+
 def resolveFlutterBin() {
-    def home = tool 'Flutter-3.35.1'
-    echo "Flutter tool home: ${home}"
+    def homeDir = env.HOME ?: '/var/lib/jenkins'
+    def bootstrap = "${homeDir}/flutter-bootstrap"
+    def candidates = [
+        bootstrap,
+        "${homeDir}/flutter",
+        '/opt/flutter',
+        '/usr/local/flutter',
+        "${env.JENKINS_HOME ?: '/var/lib/jenkins'}/tools/io.jenkins.plugins.generic_tool.GenericToolInstallation/Flutter-3.35.1",
+    ]
 
-    if (fileExists("${home}/bin/dart")) {
-        return "${home}/bin"
-    }
-    if (fileExists("${home}/flutter/bin/dart")) {
-        return "${home}/flutter/bin"
+    try {
+        def toolHome = tool 'Flutter-3.35.1'
+        echo "Flutter Generic Tool home: ${toolHome}"
+        if (toolHome && toolHome != '.') {
+            candidates.add(0, toolHome)
+        } else {
+            echo "Ignoring Generic Tool Home '${toolHome}'. It must be an absolute SDK path, not '.'."
+        }
+    } catch (ignored) {
+        echo 'Generic Tool Flutter-3.35.1 is not configured; using a cached bootstrap SDK.'
     }
 
-    error(
-        "dart not found under ${home}. " +
-        "Set Generic Tool Home to the Flutter SDK root (the folder that contains bin/flutter). " +
-        "If you used Extract *.zip/*.tar.gz, Subdirectory of extracted archive must be flutter."
-    )
+    for (def root : candidates) {
+        def bin = flutterBinIfPresent(root)
+        if (bin) {
+            echo "Using Flutter at ${bin}"
+            return bin
+        }
+    }
+
+    echo "No Flutter SDK found. Cloning 3.35.1 once into ${bootstrap}"
+    sh """
+        set -e
+        git clone --depth 1 --branch 3.35.1 https://github.com/flutter/flutter.git '${bootstrap}'
+    """
+
+    def bin = flutterBinIfPresent(bootstrap)
+    if (!bin) {
+        error("Failed to install bootstrap Flutter at ${bootstrap}")
+    }
+    return bin
 }
 
 pipeline {
