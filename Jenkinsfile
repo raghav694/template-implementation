@@ -207,6 +207,43 @@ def readDotEnvValue(String path, String key) {
     return value.trim()
 }
 
+def copyJenkinsSecretFile(String credentialsId, String dest) {
+    withCredentials([file(credentialsId: credentialsId, variable: 'SECRET_ENV_FILE')]) {
+        sh "cp \"\$SECRET_ENV_FILE\" '${dest}' && chmod 600 '${dest}'"
+    }
+    echo "Wrote ${dest} from Jenkins credential '${credentialsId}'"
+}
+
+def ensureDotEnvAssets() {
+    // pubspec lists both .env.dev and .env.prod as assets, so both must exist
+    // even when building a single flavor. They are gitignored; Jenkins secret
+    // files supply them (flutter-test-env-dev / flutter-test-env-prod).
+    copyJenkinsSecretFile('flutter-test-env-dev', '.env.dev')
+
+    def wroteProd = false
+    try {
+        copyJenkinsSecretFile('flutter-test-env-prod', '.env.prod')
+        wroteProd = true
+    } catch (Exception e) {
+        echo "Jenkins credential flutter-test-env-prod not available: ${e}"
+    }
+
+    if (!wroteProd) {
+        if (params.ENVIRONMENT == 'prod') {
+            error(
+                "Prod builds need a Jenkins secret file credential named " +
+                "flutter-test-env-prod (contents of .env.prod)."
+            )
+        }
+        if (fileExists('.env.prod.example')) {
+            sh 'cp .env.prod.example .env.prod'
+        } else {
+            writeFile file: '.env.prod', text: '# placeholder so pubspec asset .env.prod exists\n'
+        }
+        echo 'Wrote placeholder .env.prod (required pubspec asset for a dev build)'
+    }
+}
+
 def loadSlackEnv() {
     def flavorFile = ".env.${params.ENVIRONMENT}"
     def homeFile = "${env.HOME}/.env.${params.ENVIRONMENT}"
@@ -370,6 +407,7 @@ pipeline {
                 )
 
                 script {
+                    ensureDotEnvAssets()
                     loadSlackEnv()
                     env.APP_DISPLAY_NAME = readAppName()
                     slackNotify(
