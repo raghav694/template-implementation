@@ -65,46 +65,119 @@ def androidSdkLooksValid(String root) {
         fileExists("${root}/ndk")
 }
 
-def resolveAndroidSdk() {
-    def names = ['Android-SDK', 'Android SDK', 'android-sdk', 'Android']
-    def home = null
-    def usedName = null
+def androidSdkFromRoot(String root) {
+    if (!root || root == '.') {
+        return null
+    }
+    if (androidSdkLooksValid(root)) {
+        return root
+    }
+    if (androidSdkLooksValid("${root}/sdk")) {
+        return "${root}/sdk"
+    }
+    return null
+}
 
-    for (def name : names) {
+def androidSdkWritable(String root) {
+    return sh(
+        script: "touch '${root}/.jenkins-write-test' && rm -f '${root}/.jenkins-write-test'",
+        returnStatus: true
+    ) == 0
+}
+
+def listSubdirs(String parent) {
+    def raw = sh(
+        script: "find '${parent}' -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null || true",
+        returnStdout: true
+    ).trim()
+    if (!raw) {
+        return []
+    }
+    def dirs = []
+    for (def line : raw.split('\n')) {
+        def path = line.trim()
+        if (path) {
+            dirs.add(path)
+        }
+    }
+    return dirs
+}
+
+def resolveAndroidSdk() {
+    def homeDir = env.HOME ?: '/var/lib/jenkins'
+    def jenkinsHome = env.JENKINS_HOME ?: homeDir
+    def names = ['Android-SDK', 'Android SDK', 'android-sdk', 'Android']
+    def candidates = []
+
+    // Always call tool() so automatic installers run. Generic Tool Home is often
+    // '.' (same Flutter trap); that return value is not a real SDK path.
+    for (def toolName : names) {
         try {
-            def toolHome = tool name
-            echo "Android Generic Tool '${name}' home: ${toolHome}"
+            def toolHome = tool(name: toolName)
+            echo "Android tool '${toolName}' home: ${toolHome}"
             if (toolHome && toolHome != '.') {
-                home = toolHome
-                usedName = name
-                break
+                candidates.add(toolHome)
+            } else {
+                echo "Android tool '${toolName}' Home is '${toolHome}'. Looking under Jenkins tools cache."
             }
-            echo "Ignoring Android tool '${name}' Home '${toolHome}'. It must be an absolute SDK path, not '.'."
-        } catch (ignored) {
-            echo "Generic Tool '${name}' is not configured."
+        } catch (Exception e) {
+            echo "tool('${toolName}') failed: ${e}"
         }
     }
 
-    if (!home) {
+    def toolRoots = [
+        "${jenkinsHome}/tools/io.jenkins.plugins.generic_tool.GenericToolInstallation",
+        "${jenkinsHome}/tools/com.cloudbees.jenkins.plugins.customtools.CustomTool",
+        "${homeDir}/tools/io.jenkins.plugins.generic_tool.GenericToolInstallation",
+    ]
+    for (def root : toolRoots) {
+        sh "ls -la '${root}' 2>/dev/null || echo '(no tools at ${root})'"
+        for (def toolName : names) {
+            candidates.add("${root}/${toolName}")
+        }
+        for (def child : listSubdirs(root)) {
+            candidates.add(child)
+        }
+    }
+
+    candidates.add("${homeDir}/android-sdk")
+    candidates.add("${homeDir}/Android/Sdk")
+
+    def seen = []
+    def unwritable = null
+    for (def root : candidates) {
+        if (!root || root == '.' || seen.contains(root)) {
+            continue
+        }
+        seen.add(root)
+        def sdk = androidSdkFromRoot(root)
+        if (!sdk) {
+            continue
+        }
+        echo "Found Android SDK at ${sdk}"
+        if (androidSdkWritable(sdk)) {
+            echo "Using writable Android SDK at ${sdk}"
+            return sdk
+        }
+        echo "Skipping ${sdk}: jenkins cannot write there (NDK install would fail)."
+        if (!unwritable) {
+            unwritable = sdk
+        }
+    }
+
+    if (unwritable) {
         error(
-            "No Android SDK Generic Tool found. In Manage Jenkins → Tools → Generic Tool, " +
-            "add a tool named Android-SDK. Home must be the SDK root (contains platform-tools), " +
-            "not '.' and not a root-owned /opt/android-sdk unless jenkins can write there."
+            "Found Android SDK at ${unwritable} but jenkins cannot write there. " +
+            "Point Generic Tool Home at a jenkins-owned SDK, or run: " +
+            "sudo chown -R jenkins:jenkins '${unwritable}'"
         )
     }
 
-    def sdk = home
-    if (!androidSdkLooksValid(sdk) && androidSdkLooksValid("${home}/sdk")) {
-        sdk = "${home}/sdk"
-    }
-    if (!androidSdkLooksValid(sdk)) {
-        error(
-            "Android tool '${usedName}' resolved to ${home}, but that folder is not an Android SDK " +
-            "(no platform-tools / cmdline-tools / ndk). Point Home at the SDK root."
-        )
-    }
-
-    return sdk
+    error(
+        "No usable Android SDK on this agent. Generic Tool Home is often '.' which is not an SDK. " +
+        "Set Home to the SDK root (folder with platform-tools), or install automatically so files land in " +
+        "${jenkinsHome}/tools/io.jenkins.plugins.generic_tool.GenericToolInstallation/Android-SDK"
+    )
 }
 
 def markStage(String name) {
