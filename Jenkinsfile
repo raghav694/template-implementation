@@ -37,7 +37,7 @@ pipeline {
 
                 git(
                     branch: params.BRANCH,
-                    url: 'https://github.com/raghav694/template-implementation.git',
+                    url: 'git@github.com:raghav694/template-implementation.git',
                     credentialsId: 'github-vc-tests'
                 )
             }
