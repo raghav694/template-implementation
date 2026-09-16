@@ -45,7 +45,7 @@ dependencies:
   qr_flutter: ^4.1.0
   capslock_payments_sdk:
     git:
-      url: https://github.com/VoiceClub-app/capslock-payments.git
+      url: git@github.com:VoiceClub-app/capslock-payments.git
       path: sdks/flutter
       ref: 0.1.0-b1
   json_annotation: ^4.12.0
