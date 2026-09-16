@@ -21,13 +21,16 @@ pipeline {
         )
     }
 
+    // Bootstrap Flutter from Manage Jenkins → Tools → Generic Tool (name: Flutter-3.35.1).
+    // Project Flutter version comes from .fvmrc via FVM. Cache lives in the Jenkins
+    // user home so deleteDir() does not force a re-download every build.
     environment {
-        FLUTTER_HOME = "${WORKSPACE}/.flutter"
-        PATH = "${WORKSPACE}/.flutter/bin:${HOME}/.pub-cache/bin:${PATH}"
+        PATH = "${tool 'Flutter-3.35.1'}/bin:${env.HOME}/.pub-cache/bin:${env.PATH}"
+        PUB_CACHE = "${env.HOME}/.pub-cache"
+        FVM_HOME = "${env.HOME}/fvm"
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 deleteDir()
@@ -40,64 +43,19 @@ pipeline {
             }
         }
 
-        stage('Install Flutter & Dart') {
+        stage('Setup FVM') {
             steps {
                 sh '''
                     set -e
-
-                    echo "Installing Flutter..."
-
-                    if [ ! -d "$FLUTTER_HOME" ]; then
-                        git clone \
-                            --depth 1 \
-                            --branch stable \
-                            https://github.com/flutter/flutter.git \
-                            "$FLUTTER_HOME"
-                    fi
-
-                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
-
-                    echo "Flutter:"
-                    flutter --version
-
-                    echo "Dart:"
-                    dart --version
-                '''
-            }
-        }
-
-        stage('Install FVM') {
-            steps {
-                sh '''
-                    set -e
-
-                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
-
-                    echo "Installing FVM..."
 
                     dart pub global activate fvm
+                    fvm install
 
                     echo "FVM:"
                     fvm --version
-                '''
-            }
-        }
-
-        stage('Install Project Flutter Version') {
-            steps {
-                sh '''
-                    set -e
-
-                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
-
-                    echo "Installing Flutter version from .fvmrc..."
-
-                    fvm install
-
-                    echo "Project Flutter version:"
+                    echo "Project Flutter:"
                     fvm flutter --version
-
-                    echo "Project Dart version:"
+                    echo "Project Dart:"
                     fvm dart --version
                 '''
             }
@@ -107,9 +65,6 @@ pipeline {
             steps {
                 sh '''
                     set -e
-
-                    export PATH="$FLUTTER_HOME/bin:$HOME/.pub-cache/bin:$PATH"
-
                     fvm flutter pub get
                 '''
             }
@@ -118,29 +73,18 @@ pipeline {
         stage('Build') {
             steps {
                 script {
+                    def flavor = params.ENVIRONMENT
+                    def target = "lib/main_${flavor}.dart"
 
                     if (params.BUILD_TYPE == 'apk') {
-
                         sh """
                             set -e
-
-                            export PATH="\$FLUTTER_HOME/bin:\$HOME/.pub-cache/bin:\$PATH"
-
-                            fvm flutter build apk --release \
-                                --dart-define=ENV=${params.ENVIRONMENT} \
-                                -t lib/main_${params.ENVIRONMENT}.dart
+                            fvm flutter build apk --release --flavor ${flavor} -t ${target}
                         """
-
                     } else {
-
                         sh """
                             set -e
-
-                            export PATH="\$FLUTTER_HOME/bin:\$HOME/.pub-cache/bin:\$PATH"
-
-                            fvm flutter build appbundle --release \
-                                --dart-define=ENV=${params.ENVIRONMENT} \
-                                -t lib/main_${params.ENVIRONMENT}.dart
+                            fvm flutter build appbundle --release --flavor ${flavor} -t ${target}
                         """
                     }
                 }
