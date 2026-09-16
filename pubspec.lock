@@ -151,7 +151,7 @@ packages:
       path: "sdks/flutter"
       ref: "0.1.0-b1"
       resolved-ref: eeb283529802394b0400f440c82e348c4f327930
-      url: "https://github.com/VoiceClub-app/capslock-payments.git"
+      url: "git@github.com:VoiceClub-app/capslock-payments.git"
     source: git
     version: "0.1.0"
   characters:

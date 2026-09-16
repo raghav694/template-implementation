@@ -80,7 +80,8 @@ pipeline {
 
     environment {
         PUB_CACHE = "${env.HOME}/.pub-cache"
-        FVM_HOME = "${env.HOME}/fvm"
+        FVM_CACHE_PATH = "${env.HOME}/fvm"
+        GIT_TERMINAL_PROMPT = '0'
     }
 
     stages {
@@ -125,29 +126,55 @@ pipeline {
 
         stage('Dependencies') {
             steps {
-                sh '''
-                    set -e
-                    fvm flutter pub get
-                '''
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'github-vc-tests',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+                        export GIT_ASKPASS="$HOME/.ci-git-askpass"
+                        cat > "$GIT_ASKPASS" <<'EOF'
+#!/bin/sh
+case "$1" in
+  *[Uu]sername*) echo "$GIT_USERNAME" ;;
+  *) echo "$GIT_PASSWORD" ;;
+esac
+EOF
+                        chmod 700 "$GIT_ASKPASS"
+                        fvm flutter pub get
+                    '''
+                }
             }
         }
 
         stage('Build') {
             steps {
-                script {
-                    def flavor = params.ENVIRONMENT
-                    def target = "lib/main_${flavor}.dart"
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'github-vc-tests',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_PASSWORD'
+                    )
+                ]) {
+                    script {
+                        def flavor = params.ENVIRONMENT
+                        def target = "lib/main_${flavor}.dart"
+                        env.GIT_ASKPASS = "${env.HOME}/.ci-git-askpass"
 
-                    if (params.BUILD_TYPE == 'apk') {
-                        sh """
-                            set -e
-                            fvm flutter build apk --release --flavor ${flavor} -t ${target}
-                        """
-                    } else {
-                        sh """
-                            set -e
-                            fvm flutter build appbundle --release --flavor ${flavor} -t ${target}
-                        """
+                        if (params.BUILD_TYPE == 'apk') {
+                            sh """
+                                set -e
+                                fvm flutter build apk --release --flavor ${flavor} -t ${target}
+                            """
+                        } else {
+                            sh """
+                                set -e
+                                fvm flutter build appbundle --release --flavor ${flavor} -t ${target}
+                            """
+                        }
                     }
                 }
             }
@@ -173,6 +200,10 @@ pipeline {
             echo "====================================="
             echo "BUILD FAILED"
             echo "====================================="
+        }
+
+        always {
+            sh 'rm -f "$HOME/.ci-git-askpass"'
         }
     }
 }
