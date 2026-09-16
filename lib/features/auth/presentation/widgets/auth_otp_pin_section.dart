@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pinput/pinput.dart';
 
-/// 6-digit OTP pin input using [Pinput], styled to match the light-theme
+/// 4-digit OTP pin input using [Pinput], styled to match the light-theme
 /// accent palette.
 class AuthOtpPinSection extends StatelessWidget {
+  static const int pinLength = 4;
+
   const AuthOtpPinSection({
     super.key,
     required this.phoneNo,
@@ -76,7 +78,7 @@ class AuthOtpPinSection extends StatelessWidget {
           child: IgnorePointer(
             ignoring: readOnly,
             child: Pinput(
-              length: 6,
+              length: pinLength,
               controller: controller,
               focusNode: focusNode,
               autofocus: !readOnly,

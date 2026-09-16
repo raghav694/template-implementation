@@ -189,8 +189,14 @@ class _AuthScreenState extends State<AuthScreen> {
                         isLoading: isLoading,
                         errorMessage: errorMessage,
                         onOtpChanged: (v) {
-                          setState(() => _otpFilled = v.length == 6);
-                          if (v.length == 6 && !isLoading) _verifyOtp();
+                          setState(
+                            () => _otpFilled =
+                                v.length == AuthOtpPinSection.pinLength,
+                          );
+                          if (v.length == AuthOtpPinSection.pinLength &&
+                              !isLoading) {
+                            _verifyOtp();
+                          }
                         },
                         onVerify: _verifyOtp,
                         onResend: _resendOtp,

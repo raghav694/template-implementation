@@ -14,7 +14,7 @@ class AuthOtpSentToText extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Text.rich(
         TextSpan(
-          text: 'Enter the 6-digit code sent to ',
+          text: 'Enter the 4-digit code sent to ',
           children: [
             TextSpan(
               text: phoneNo,

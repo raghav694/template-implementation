@@ -55,6 +55,204 @@ def resolveFlutterBin() {
     return bin
 }
 
+def androidSdkLooksValid(String root) {
+    if (!root || root == '.') {
+        return false
+    }
+    return fileExists("${root}/platform-tools") ||
+        fileExists("${root}/cmdline-tools") ||
+        fileExists("${root}/build-tools") ||
+        fileExists("${root}/ndk")
+}
+
+def resolveAndroidSdk() {
+    def names = ['Android-SDK', 'Android SDK', 'android-sdk', 'Android']
+    def home = null
+    def usedName = null
+
+    for (def name : names) {
+        try {
+            def toolHome = tool name
+            echo "Android Generic Tool '${name}' home: ${toolHome}"
+            if (toolHome && toolHome != '.') {
+                home = toolHome
+                usedName = name
+                break
+            }
+            echo "Ignoring Android tool '${name}' Home '${toolHome}'. It must be an absolute SDK path, not '.'."
+        } catch (ignored) {
+            echo "Generic Tool '${name}' is not configured."
+        }
+    }
+
+    if (!home) {
+        error(
+            "No Android SDK Generic Tool found. In Manage Jenkins → Tools → Generic Tool, " +
+            "add a tool named Android-SDK. Home must be the SDK root (contains platform-tools), " +
+            "not '.' and not a root-owned /opt/android-sdk unless jenkins can write there."
+        )
+    }
+
+    def sdk = home
+    if (!androidSdkLooksValid(sdk) && androidSdkLooksValid("${home}/sdk")) {
+        sdk = "${home}/sdk"
+    }
+    if (!androidSdkLooksValid(sdk)) {
+        error(
+            "Android tool '${usedName}' resolved to ${home}, but that folder is not an Android SDK " +
+            "(no platform-tools / cmdline-tools / ndk). Point Home at the SDK root."
+        )
+    }
+
+    return sdk
+}
+
+def markStage(String name) {
+    env.LAST_STAGE = name
+}
+
+def readAppName() {
+    if (!fileExists('project_config.yaml')) {
+        return 'App'
+    }
+    def text = readFile('project_config.yaml')
+    def matcher = text =~ /(?m)^ {2}name:\s*"([^"]+)"/
+    return matcher.find() ? matcher.group(1) : 'App'
+}
+
+def readDotEnvValue(String path, String key) {
+    if (!fileExists(path)) {
+        return ''
+    }
+    def value = ''
+    readFile(path).split('\n').each { raw ->
+        def line = raw.replaceAll('\r', '')
+        if (line.startsWith("${key}=")) {
+            value = line.substring(key.length() + 1)
+        }
+    }
+    return value.trim()
+}
+
+def loadSlackEnv() {
+    def flavorFile = ".env.${params.ENVIRONMENT}"
+    def homeFile = "${env.HOME}/.env.${params.ENVIRONMENT}"
+    def paths = [flavorFile, homeFile, '.slack.env', "${env.HOME}/.slack.env"]
+    def token = ''
+    def channel = ''
+    paths.each { path ->
+        if (!token) {
+            token = readDotEnvValue(path, 'SLACK_API_TOKEN')
+        }
+        if (!token) {
+            token = readDotEnvValue(path, 'SLACK_BOT_TOKEN')
+        }
+        if (!channel) {
+            channel = readDotEnvValue(path, 'SLACK_CHANNEL_ID')
+        }
+    }
+    env.SLACK_API_TOKEN = token
+    env.SLACK_CHANNEL_ID = channel
+    if (token && channel) {
+        echo "Slack env loaded for ${params.ENVIRONMENT}"
+    } else {
+        echo "Slack skipped: set SLACK_API_TOKEN and SLACK_CHANNEL_ID in ${flavorFile} (or ${homeFile})"
+    }
+}
+
+def slackConfigured() {
+    return env.SLACK_API_TOKEN?.trim() && env.SLACK_CHANNEL_ID?.trim()
+}
+
+def slackErrorSnippet() {
+    try {
+        def logLines = currentBuild.rawBuild.getLog(200)
+        def interesting = logLines.findAll { line ->
+            def lower = line.toLowerCase()
+            lower.contains('what went wrong') ||
+                lower.contains('failure:') ||
+                lower.contains('error:') ||
+                lower.contains('fatal:') ||
+                lower.contains('failed to') ||
+                lower.contains('exception') ||
+                lower.contains('not found')
+        }
+        if (interesting.isEmpty()) {
+            interesting = logLines.findAll { it?.trim() }
+        }
+        def n = Math.min(2, interesting.size())
+        if (n == 0) {
+            return "See ${env.BUILD_URL}console"
+        }
+        return interesting.subList(interesting.size() - n, interesting.size())
+            .collect { it.take(240) }
+            .join('\n')
+    } catch (Exception ignored) {
+        return "See ${env.BUILD_URL}console"
+    }
+}
+
+def slackNotify(String text) {
+    if (!slackConfigured()) {
+        echo 'Slack not configured; skipping message'
+        return
+    }
+    try {
+        writeFile file: '.ci-slack-message.txt', text: text
+        sh(script: '''
+python3 - <<'PY'
+import json, os, urllib.request
+
+text = open(".ci-slack-message.txt", encoding="utf-8").read()
+body = json.dumps(
+    {"channel": os.environ["SLACK_CHANNEL_ID"], "text": text},
+    ensure_ascii=False,
+).encode("utf-8")
+req = urllib.request.Request(
+    "https://slack.com/api/chat.postMessage",
+    data=body,
+    headers={
+        "Authorization": "Bearer " + os.environ["SLACK_API_TOKEN"],
+        "Content-Type": "application/json; charset=utf-8",
+    },
+    method="POST",
+)
+with urllib.request.urlopen(req, timeout=60) as resp:
+    payload = json.loads(resp.read().decode())
+if not payload.get("ok"):
+    raise SystemExit("Slack chat.postMessage failed: " + json.dumps(payload))
+print("Slack message sent")
+PY
+        ''', returnStatus: true)
+    } catch (Exception e) {
+        echo "Slack message failed: ${e}"
+    }
+}
+
+def findBuiltArtifact() {
+    def flavor = params.ENVIRONMENT
+    if (params.BUILD_TYPE == 'apk') {
+        def flavorApk = "build/app/outputs/flutter-apk/app-${flavor}-release.apk"
+        def defaultApk = 'build/app/outputs/flutter-apk/app-release.apk'
+        if (fileExists(flavorApk)) {
+            return flavorApk
+        }
+        if (fileExists(defaultApk)) {
+            return defaultApk
+        }
+        return null
+    }
+    def flavorAab = "build/app/outputs/bundle/${flavor}Release/app-${flavor}-release.aab"
+    def defaultAab = 'build/app/outputs/bundle/release/app-release.aab'
+    if (fileExists(flavorAab)) {
+        return flavorAab
+    }
+    if (fileExists(defaultAab)) {
+        return defaultAab
+    }
+    return null
+}
+
 pipeline {
     agent any
 
@@ -82,11 +280,14 @@ pipeline {
         PUB_CACHE = "${env.HOME}/.pub-cache"
         FVM_CACHE_PATH = "${env.HOME}/fvm"
         GIT_TERMINAL_PROMPT = '0'
+        LAST_STAGE = 'unknown'
+        APP_DISPLAY_NAME = 'App'
     }
 
     stages {
         stage('Checkout') {
             steps {
+                script { markStage('Checkout') }
                 deleteDir()
 
                 git(
@@ -94,15 +295,39 @@ pipeline {
                     url: 'https://github.com/raghav694/template-implementation.git',
                     credentialsId: 'github-vc-tests'
                 )
+
+                script {
+                    loadSlackEnv()
+                    env.APP_DISPLAY_NAME = readAppName()
+                    slackNotify(
+                        "Build initiated for ${env.APP_DISPLAY_NAME} and branch `${params.BRANCH}` " +
+                        "(${params.ENVIRONMENT} ${params.BUILD_TYPE})."
+                    )
+                }
             }
         }
 
         stage('Setup FVM') {
             steps {
                 script {
+                    markStage('Setup FVM')
                     def flutterBin = resolveFlutterBin()
-                    env.PATH = "${flutterBin}:${env.HOME}/.pub-cache/bin:${env.PATH}"
+                    def androidSdk = resolveAndroidSdk()
+                    env.ANDROID_SDK_ROOT = androidSdk
+                    env.ANDROID_HOME = androidSdk
+                    def ndk = "${androidSdk}/ndk/27.0.12077973"
+                    if (fileExists(ndk)) {
+                        env.ANDROID_NDK_HOME = ndk
+                    }
+                    env.PATH = [
+                        flutterBin,
+                        "${androidSdk}/platform-tools",
+                        "${androidSdk}/cmdline-tools/latest/bin",
+                        "${env.HOME}/.pub-cache/bin",
+                        env.PATH,
+                    ].join(':')
                     echo "Using dart at ${flutterBin}/dart"
+                    echo "ANDROID_SDK_ROOT=${env.ANDROID_SDK_ROOT}"
                 }
 
                 sh '''
@@ -126,6 +351,7 @@ pipeline {
 
         stage('Dependencies') {
             steps {
+                script { markStage('Dependencies') }
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'github-vc-tests',
@@ -152,6 +378,7 @@ EOF
 
         stage('Build') {
             steps {
+                script { markStage('Build') }
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'github-vc-tests',
@@ -188,6 +415,30 @@ EOF
                 fingerprint: true
             )
 
+            script {
+                if (!slackConfigured()) {
+                    echo 'Slack not configured; skipping upload'
+                    return
+                }
+                def artifact = findBuiltArtifact()
+                def comment =
+                    "Build SUCCESSFUL for ${env.APP_DISPLAY_NAME} " +
+                    "(branch `${params.BRANCH}`, ${params.ENVIRONMENT} ${params.BUILD_TYPE})."
+                if (artifact) {
+                    writeFile file: '.ci-slack-comment.txt', text: comment
+                    def status = sh(
+                        script: "bash scripts/ci_slack.sh upload '${artifact}'",
+                        returnStatus: true
+                    )
+                    if (status != 0) {
+                        echo 'Slack upload failed; sending text only'
+                        slackNotify(comment + "\nArtifact: ${artifact}")
+                    }
+                } else {
+                    slackNotify(comment + '\nNo APK/AAB file was found to upload.')
+                }
+            }
+
             echo "====================================="
             echo "BUILD SUCCESSFUL"
             echo "Branch: ${params.BRANCH}"
@@ -197,13 +448,21 @@ EOF
         }
 
         failure {
+            script {
+                def snippet = slackErrorSnippet()
+                slackNotify(
+                    "Build FAILED for ${env.APP_DISPLAY_NAME} on branch `${params.BRANCH}` " +
+                    "at stage *${env.LAST_STAGE}*.\n${snippet}"
+                )
+            }
+
             echo "====================================="
             echo "BUILD FAILED"
             echo "====================================="
         }
 
         always {
-            sh 'rm -f "$HOME/.ci-git-askpass"'
+            sh 'rm -f "$HOME/.ci-git-askpass" .ci-slack-message.txt .ci-slack-comment.txt'
         }
     }
 }

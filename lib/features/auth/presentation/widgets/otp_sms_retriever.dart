@@ -14,9 +14,9 @@ import 'package:smart_auth/smart_auth.dart';
 /// A `null` return here is a normal, silent no-op — manual entry is always
 /// the fallback, this is a pure enhancement on top of it.
 class OtpSmsRetriever implements SmsRetriever {
-  /// Exactly 6 digits — narrower than smart_auth's default 4–8 digit
+  /// Exactly 4 digits — narrower than smart_auth's default 4–8 digit
   /// matcher, since that's the fixed OTP length this template expects.
-  static const _codeMatcher = r'\d{6}';
+  static const _codeMatcher = r'\d{4}';
 
   @override
   bool get listenForMultipleSms => false;

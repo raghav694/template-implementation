@@ -86,7 +86,7 @@ void main() {
     final verified = bloc.stream.firstWhere(
       (state) => !state.isLoading && state.error == null,
     );
-    bloc.add(const PhoneAuthOtpVerified('123456'));
+    bloc.add(const PhoneAuthOtpVerified('1234'));
     await verified;
     await Future<void>.delayed(Duration.zero);
 
